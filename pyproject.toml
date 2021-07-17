@@ -2,7 +2,7 @@
 name = "openwisp"
 version = "0.1.0"
 description = ""
-authors = ["Thai Nguyen <shiroemon279@gmail.com"]
+authors = ["Thai Nguyen <shiroemon279@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
