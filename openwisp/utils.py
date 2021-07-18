@@ -16,17 +16,9 @@ try:
 except Exception as e:
     logger.error(f"There seems to be an error: {e}")
 
-
-# def get_token():
-#    try:
-#        password = os.environ["PASS"]
-#        auth_data = {"username": "admin", "password": password}
-#        res = ses.post(f"{URI}/user/token/", data=auth_data).json()
-#        token = res.get("token")
-#    except KeyError:
-#        logger.error("Please set the PASS environment variable!")
-#    except Exception as e:
-#        logger.error(f"There seems to be an error: {e}")
+"""
+Get the list of OpenWRT devices currently registered to this OpenWISP controller
+"""
 
 
 def get_device():
@@ -34,5 +26,33 @@ def get_device():
         res = ses.get(f"{URI}/controller/device").json()
         devices = res.get("results")
         return devices
+    except Exception as e:
+        logger.error(f"There seems to be an error: {e}")
+
+
+"""
+Get the device groups, which contains OpenWRT devices
+"""
+
+
+def get_device_group():
+    try:
+        res = ses.get(f"{URI}/controller/groups").json()
+        device_group = res.get("results")
+        return device_group
+    except Exception as e:
+        logger.error(f"There seems to be an error: {e}")
+
+
+"""
+Get the list of templates (configurations settings) for OpenWRT devices
+"""
+
+
+def get_template():
+    try:
+        res = ses.get(f"{URI}/controller/template").json()
+        templates = res.get("results")
+        return templates
     except Exception as e:
         logger.error(f"There seems to be an error: {e}")
