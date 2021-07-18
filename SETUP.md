@@ -40,19 +40,19 @@ $ ansible-playbook -i hosts playbook.yml -k --become -K
 ### Integrating `openwisp-monitoring`
 - Install `influxdb` on the Debian VM:
 ```bash
-# curl -s https://repos.influxdata.com/influxdb.key | gpg --dearmor > /etc/apt/trusted.gpg.d/influxdb.gpg
-# export DISTRIB_ID=$(lsb_release -si); export DISTRIB_CODENAME=$(lsb_release -sc)
-# echo "deb [signed-by=/etc/apt/trusted.gpg.d/influxdb.gpg] https://repos.influxdata.com/${DISTRIB_ID,,} ${DISTRIB_CODENAME} stable" > /etc/apt/sources.list.d/influxdb.list
-# apt-get update && apt-get install influxdb
-# systemctl unmask influxdb.service
-# systemctl start influxdb
+curl -s https://repos.influxdata.com/influxdb.key | gpg --dearmor > /etc/apt/trusted.gpg.d/influxdb.gpg
+export DISTRIB_ID=$(lsb_release -si); export DISTRIB_CODENAME=$(lsb_release -sc)
+echo "deb [signed-by=/etc/apt/trusted.gpg.d/influxdb.gpg] https://repos.influxdata.com/${DISTRIB_ID,,} ${DISTRIB_CODENAME} stable" > /etc/apt/sources.list.d/influxdb.list
+apt-get update && apt-get install influxdb
+systemctl unmask influxdb.service
+systemctl start influxdb
 ```
 - Change directory into `/opt/openwisp2`
 - Activate the virtual environment, and install `openwisp-monitoring` with `pip`, then collect the static files:
 ```bash
-$ source env/bin/activate
-$ pip install openwisp-monitoring
-$ python manage.py collectstatic
+source env/bin/activate
+pip install openwisp-monitoring
+python manage.py collectstatic
 ```
 - Edit `/opt/openwisp2/openwisp/settings.py`, add the `openwisp-monitoring` apps, database configurations and celery task:
 ```python
@@ -91,15 +91,15 @@ urlpatterns = [
 ```
 - Restart `supervisor`:
 ```bash
-$ sudo systemctl restart supervisor.service
+sudo systemctl restart supervisor.service
 ```
 
 ## Setting up OpenWRT
 - On the VM running OpenWRT, install `openwisp-config` and `lua-cjson`:
 ```bash
-# opkg update
-# opkg install  http://downloads.openwisp.io/openwisp-config/latest/openwisp-config-openssl_0.6.0a-1_all.ipk
-# opkg install lua-cjson
+opkg update
+opkg install  http://downloads.openwisp.io/openwisp-config/latest/openwisp-config-openssl_0.6.0a-1_all.ipk
+opkg install lua-cjson
 ```
 - Edit `/etc/config/openwisp`, change `url`, `verify_ssl` and `shared_secret`:
 ```config
