@@ -1,10 +1,11 @@
 # Setting up the OpenWISP and OpenWRT infrastructure
 
-First, prepare 2 virtual machines:
+## First, prepare 2 virtual machines:
 - 1 machine running Debian 10, will be running OpenWISP
-- 1 machine running OpenWRT, downloaded from [here](https://downloads.openwrt.org/releases/21.02.0-rc3/targets/x86/64/)
+- 1 machine running OpenWRT, downloaded from https://downloads.openwrt.org/releases/21.02.0-rc3/targets/x86/64/
 
-After installing Debian on the first VM:
+## Setting up OpenWISP 
+### Installing OpenWISP
 - Create a folder name `openwisp`
 - Clone [ansible-openwisp2](https://github.com/openwisp/ansible-openwisp2) as `openwisp.openwisp2`
 - Clone [Stouts.postfix](https://github.com/nemesisdesign/Stouts.postfix)
@@ -29,8 +30,87 @@ After installing Debian on the first VM:
       OPENWISP_CONTROLLER_API: true
     openwisp2_extra_python_packages:
       - "djangorestframework==3.12.4"
+    openwisp2_time_zone: "Asia/Ho_Chi_Minh" 
 ```
 - Run the playbook:
 ```bash
 $ ansible-playbook -i hosts playbook.yml -k --become -K
 ```
+
+### Integrating `openwisp-monitoring`
+- Install `influxdb` on the Debian VM:
+```bash
+# curl -s https://repos.influxdata.com/influxdb.key | gpg --dearmor > /etc/apt/trusted.gpg.d/influxdb.gpg
+# export DISTRIB_ID=$(lsb_release -si); export DISTRIB_CODENAME=$(lsb_release -sc)
+# echo "deb [signed-by=/etc/apt/trusted.gpg.d/influxdb.gpg] https://repos.influxdata.com/${DISTRIB_ID,,} ${DISTRIB_CODENAME} stable" > /etc/apt/sources.list.d/influxdb.list
+# apt-get update && apt-get install influxdb
+# systemctl unmask influxdb.service
+# systemctl start influxdb
+```
+- Change directory into `/opt/openwisp2`
+- Activate the virtual environment, and install `openwisp-monitoring` with `pip`, then collect the static files:
+```bash
+$ source env/bin/activate
+$ pip install openwisp-monitoring
+$ python manage.py collectstatic
+```
+- Edit `/opt/openwisp2/openwisp/settings.py`, add the `openwisp-monitoring` apps, database configurations and celery task:
+```python
+INSTALLED_APPS = [
+  # other apps...
+  # monitoring
+  'openwisp_monitoring.monitoring',
+  'openwisp_monitoring.device',
+  'openwisp_monitoring.check',
+  'nested_admin',
+]
+
+TIMESERIES_DATABASE = {
+    'BACKEND': 'openwisp_monitoring.db.backends.influxdb',
+    'USER': 'openwisp',
+    'PASSWORD': 'openwisp',
+    'NAME': 'openwisp2',
+    'HOST': 'localhost',
+    'PORT': '8086',
+}
+
+CELERY_BEAT_SCHEDULE = {
+    # other tasks...
+    'run_checks': {
+        'task': 'openwisp_monitoring.check.tasks.run_checks',
+        'schedule': timedelta(minutes=5),
+    },
+}
+```
+- Edit `/opt/openwisp2/openwisp/urls.py`, add the `openwisp-monitoring` urls:
+```python
+urlpatterns = [
+    # other urls...
+    url(r'', include('openwisp_monitoring.urls')),
+]
+```
+- Restart `supervisor`:
+```bash
+$ sudo systemctl restart supervisor.service
+```
+
+## Setting up OpenWRT
+- On the VM running OpenWRT, install `openwisp-config` and `lua-cjson`:
+```bash
+# opkg update
+# opkg install  http://downloads.openwisp.io/openwisp-config/latest/openwisp-config-openssl_0.6.0a-1_all.ipk
+# opkg install lua-cjson
+```
+- Edit `/etc/config/openwisp`, change `url`, `verify_ssl` and `shared_secret`:
+```config
+config controller 'http'
+  option url '<IP of the VM running OpenWISP'
+  option verify_ssl '0' # Self-signed cert
+  option shared_secret '<secret, found in Organization tab of OpenWISP WebUI>'
+```
+![token](screenshots/token.png)
+- Restart `openwisp_config`:
+```bash
+# /etc/init.d/openwisp_config restart
+```
+
