@@ -9,24 +9,24 @@
             <thead>
                 <th colspan=5>Devices</th>
             </thead>
-        <tbody>
-            <tr>
-                <th>Id</th>
-                <th>Name</th>
-                <th>IP</th>
-                <th>OS</th>
-                <th>System</th>
-            </tr>
-            {% for device in devices %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ device.name }}</td>
-                <td>{{ device.last_ip }}</td>
-                <td>{{ device.os }}</td>
-                <td>{{ device.system }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+            <tbody>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>IP</th>
+                    <th>OS</th>
+                    <th>System</th>
+                </tr>
+                {% for device in devices %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><a href="/devices/{{ loop.index }}">{{ device.name }}</a></td>
+                    <td>{{ device.last_ip }}</td>
+                    <td>{{ device.os }}</td>
+                    <td>{{ device.system }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
         </table>
     </section>
 </body>

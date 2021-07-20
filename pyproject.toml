@@ -9,6 +9,7 @@ python = "^3.9"
 requests = "^2.25.1"
 Flask = "^2.0.1"
 python-dotenv = "^0.18.0"
+redis = "^3.5.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

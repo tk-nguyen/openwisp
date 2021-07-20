@@ -1,9 +1,9 @@
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 from openwisp.utils import *
 from dotenv import load_dotenv
 
 load_dotenv()
-app = Flask("openwisp")
+app = Flask(__name__)
 
 
 @app.route("/")
@@ -20,6 +20,12 @@ def device_group():
 def devices():
     devices = get_device()
     return render_template("device.html", devices=devices)
+
+
+@app.route("/devices/<int:id>")
+def metrics(id):
+    metrics = get_metrics(id - 1)
+    return render_template("metrics.html", metrics=metrics)
 
 
 @app.route("/templates")
