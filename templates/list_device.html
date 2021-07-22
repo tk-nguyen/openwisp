@@ -2,7 +2,7 @@
 {% block content %}
 <body>
     <header>
-        <h2>List of registered OpenWRT devices</h2>
+        <h1>List of registered OpenWRT devices</h1>
     </header>
     <section>
         <table>
@@ -27,7 +27,19 @@
                 </tr>
                 {% endfor %}
             </tbody>
+            <tfoot>
+                <th colspan=5><a href="/devices/create">Create device</a></th>
+            </tfoot>
         </table>
     </section>
+    <header>
+    {% with messages = get_flashed_messages() %}
+        {% if messages%}
+            {% for message in messages %}
+            <h3>{{ message }}</h3>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    </header>
 </body>
 {% endblock %}

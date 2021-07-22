@@ -14,11 +14,12 @@ logger.info("Starting the openwisp watcher...")
 URI = "https://172.20.20.10/api/v1"
 openwisp = Session()
 openwisp.verify = False
-try:
-    openwisp.headers.update({"Authorization": f"Bearer {os.environ['TOKEN']}"})
-    openwisp.headers.update({"Accept": "application/json"})
-except Exception as e:
-    logger.error(f"There seems to be an error: {e}")
+openwisp.headers.update(
+    {
+        "Authorization": f"Bearer {os.environ['TOKEN']}",
+        "Accept": "*/*",
+    }
+)
 
 # Redis connection
 redis_client = redis.from_url(os.environ["REDIS_URL"])
@@ -26,7 +27,7 @@ redis_client = redis.from_url(os.environ["REDIS_URL"])
 # Get the list of OpenWRT devices currently registered to this OpenWISP controller
 def get_device():
     try:
-        res = openwisp.get(f"{URI}/controller/device")
+        res = openwisp.get(f"{URI}/controller/device/")
         res.raise_for_status()
         devices = res.json().get("results")
         redis_client.set("devices", json.dumps(devices))
@@ -35,10 +36,24 @@ def get_device():
         logger.error(f"There seems to be an error: {e}")
 
 
+# Create a new OpenWRT device to be managed by this controller
+def create_device(data):
+    try:
+        res = openwisp.post(
+            f"{URI}/controller/device/",
+            json=data,
+        )
+        res.raise_for_status()
+        return "Device created successfully!"
+    except Exception as e:
+        logger.error(f"There seems to be an error: {e}")
+        return "Cannot create the device"
+
+
 # Get the device groups, which contains OpenWRT devices
 def get_device_group():
     try:
-        res = openwisp.get(f"{URI}/controller/groups")
+        res = openwisp.get(f"{URI}/controller/groups/")
         res.raise_for_status()
         device_group = res.json().get("results")
         return device_group
@@ -49,7 +64,7 @@ def get_device_group():
 # Get the list of templates (configurations settings) for OpenWRT devices
 def get_template():
     try:
-        res = openwisp.get(f"{URI}/controller/template")
+        res = openwisp.get(f"{URI}/controller/template/")
         res.raise_for_status()
         templates = res.json().get("results")
         return templates
