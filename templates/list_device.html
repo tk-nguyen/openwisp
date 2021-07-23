@@ -4,7 +4,7 @@
     <header>
         <h1>List of registered OpenWRT devices</h1>
     </header>
-    <section>
+    <main>
         <table>
             <thead>
                 <th colspan=5>Devices</th>
@@ -31,15 +31,6 @@
                 <th colspan=5><a href="/devices/create">Create device</a></th>
             </tfoot>
         </table>
-    </section>
-    <header>
-    {% with messages = get_flashed_messages() %}
-        {% if messages%}
-            {% for message in messages %}
-            <h3>{{ message }}</h3>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-    </header>
+    </main>
 </body>
 {% endblock %}

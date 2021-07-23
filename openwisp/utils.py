@@ -37,11 +37,11 @@ def get_device():
 
 
 # Create a new OpenWRT device to be managed by this controller
-def create_device(data):
+def create_device(form):
     try:
         res = openwisp.post(
             f"{URI}/controller/device/",
-            json=data,
+            json=form.data,
         )
         res.raise_for_status()
         return "Device created successfully!"

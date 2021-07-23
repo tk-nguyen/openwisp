@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, render_template, request, flash, redirect
 from flask.helpers import url_for
 from openwisp.utils import *
+from openwisp.forms import *
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -26,13 +27,14 @@ def list_devices():
 
 @app.route("/devices/create", methods=["GET", "POST"])
 def create_new_device():
+    form = CreateDeviceForm()
     if request.method == "GET":
-        return render_template("create_device.html")
-    if request.method == "POST":
-        data = request.form
-        result = create_device(data)
-        flash(result)
-        return redirect(url_for("list_devices"))
+        return render_template("create_device.html", form=form)
+    elif request.method == "POST":
+        if form.validate_on_submit():
+            result = create_device(form)
+            return redirect(url_for("list_devices"))
+        return render_template("create_device.html", form=form)
 
 
 @app.route("/devices/<int:id>")
