@@ -7,9 +7,9 @@
     <main>
         <table>
             <thead>
-                <th colspan=5>Devices</th>
-            </thead>
-            <tbody>
+                <tr>
+                    <th colspan=5>Devices</th>
+                </tr>
                 <tr>
                     <th>Id</th>
                     <th>Name</th>
@@ -17,6 +17,8 @@
                     <th>OS</th>
                     <th>System</th>
                 </tr>
+            </thead>
+            <tbody>
                 {% for device in devices %}
                 <tr>
                     <td>{{ loop.index }}</td>

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<body>
+    <header>
+        <h1>List of configuration templates</h1>
+    </header>
+    <main>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=6>Templates</th>
+                </tr>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>config</th>
+                    <th>Required</th>
+                    <th>Default</th>
+                    <th>Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for template in templates %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ template.name }}</td>
+                    <td>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Id</th>
+                                    <th>Type</th>
+                                    <th>Path</th>
+                                    <th>Permission</th>
+                                    <th>Contents</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for type, details in template.config.items() %}
+                                    {% for config in details %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ type }}</td>
+                                        <td>{{ config.path }}</td>
+                                        <td>{{ config.mode }}</td>
+                                        <td><code>{{ config.contents }}</code></td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </td>
+                    <td>{{ template.type }}</td>
+                    <td>{{ template.required }}</td>
+                    <td>{{ template.default }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan=6><a href="/templates/create">Create template</a></th>
+                </tr>
+            </tfoot>
+        </table>
+    </main>
+</body>
+
+{% endblock %}

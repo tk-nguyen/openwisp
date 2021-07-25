@@ -1,8 +1,15 @@
-from flask import Flask, jsonify, render_template, request, flash, redirect
+from flask import Flask, jsonify, render_template, request, redirect
 from flask.helpers import url_for
-from openwisp.utils import *
-from openwisp.forms import *
+from openwisp.utils import (
+    get_device,
+    get_device_group,
+    get_metrics,
+    get_template,
+    create_device,
+)
+from openwisp.forms import CreateDeviceForm
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
 app = Flask(__name__)
@@ -22,7 +29,7 @@ def device_group():
 @app.route("/devices")
 def list_devices():
     devices = get_device()
-    return render_template("list_device.html", devices=devices)
+    return render_template("list_devices.html", devices=devices)
 
 
 @app.route("/devices/create", methods=["GET", "POST"])
@@ -44,5 +51,11 @@ def metrics(id):
 
 
 @app.route("/templates")
-def templates():
-    return jsonify(get_template())
+def list_templates():
+    templates = get_template()
+    return render_template("list_templates.html", templates=templates)
+
+
+# @app.route("/templates/create", methods=["GET", "POST"])
+# def create_new_template():
+#     continue
