@@ -1,0 +1,48 @@
+# Authenticate to ubus
+POST http://172.20.20.20/cgi-bin/luci/rpc/auth
+{
+    "id": 2,
+    "method": "login",
+    "params": ["root", "test"]
+}
+
+# Get network info
+:token = 701802d1e7a88965d59db2610108817b
+GET http://172.20.20.20/cgi-bin/luci/rpc/uci?auth=:token
+{
+    "method": "get_all",
+    "params": ["network"]
+}
+
+# Get conntrack
+GET http://172.20.20.20/cgi-bin/luci/rpc/sys?auth=:token
+{
+    "method": "net.conntrack"
+}
+
+# Get interface info
+GET http://172.20.20.20/cgi-bin/luci/rpc/sys?auth=:token
+{
+    "method": "net.devices"
+}
+
+# Get the password for an user
+GET http://172.20.20.20/cgi-bin/luci/rpc/sys?auth=:token
+{
+    "method": "user.getpasswd",
+    "params": ["root"]
+}
+
+# Get the package list
+GET http://172.20.20.20/cgi-bin/luci/rpc/ipkg?auth=:token
+{
+    "method": "installed",
+    "params": ["vim"]
+}
+
+# Get the route
+GET http://172.20.20.20/cgi-bin/luci/rpc/ip?auth=:token
+{
+    "method": "route",
+    "params": ["1.1.1.1"]
+}

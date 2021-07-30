@@ -36,14 +36,14 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for type, details in template.config.items() %}
+                                {% for type, details in template.config.items() if type == "files" %}
                                     {% for config in details %}
                                     <tr>
                                         <td>{{ loop.index }}</td>
                                         <td>{{ type }}</td>
                                         <td>{{ config.path }}</td>
                                         <td>{{ config.mode }}</td>
-                                        <td><code>{{ config.contents }}</code></td>
+                                        <td>{{ config.contents }}</td>
                                     </tr>
                                     {% endfor %}
                                 {% endfor %}

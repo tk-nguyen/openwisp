@@ -1,11 +1,13 @@
 from flask import Flask, jsonify, render_template, request, redirect
 from flask.helpers import url_for
 from openwisp.utils import (
+    get_conntrack,
     get_device,
     get_device_group,
     get_metrics,
     get_template,
     create_device,
+    create_template,
 )
 from openwisp.forms import CreateDeviceForm
 from dotenv import load_dotenv
@@ -35,27 +37,21 @@ def list_devices():
 @app.route("/devices/create", methods=["GET", "POST"])
 def create_new_device():
     form = CreateDeviceForm()
-    if request.method == "GET":
-        return render_template("create_device.html", form=form)
-    elif request.method == "POST":
+    if request.method == "POST":
         if form.validate_on_submit():
             result = create_device(form)
             return redirect(url_for("list_devices"))
-        return render_template("create_device.html", form=form)
+    return render_template("create_device.html", form=form)
 
 
 @app.route("/devices/<int:id>")
 def metrics(id):
     metrics = get_metrics(id - 1)
-    return render_template("metrics.html", metrics=metrics)
+    conntrack = get_conntrack()
+    return render_template("metrics.html", metrics=metrics, conntrack=conntrack)
 
 
 @app.route("/templates")
 def list_templates():
     templates = get_template()
     return render_template("list_templates.html", templates=templates)
-
-
-# @app.route("/templates/create", methods=["GET", "POST"])
-# def create_new_template():
-#     continue

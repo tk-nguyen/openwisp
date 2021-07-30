@@ -21,22 +21,28 @@ openwisp.headers.update(
     }
 )
 
+luci_rpc = Session()
+LUCI_URI = "http://172.20.20.20/cgi-bin/luci/rpc"
+# Auth against the luci RPC to get the token
+auth = {"id": 1, "method": "login", "params": ["root", "test"]}
+token = luci_rpc.post(f"{LUCI_URI}/auth", json=auth).json().get("result")
+luci_rpc.params.update({"auth": token})
 # Redis connection
 redis_client = redis.from_url(os.environ["REDIS_URL"])
 
-# Get the list of OpenWRT devices currently registered to this OpenWISP controller
+
 def get_device():
     try:
         res = openwisp.get(f"{URI}/controller/device/")
         res.raise_for_status()
         devices = res.json().get("results")
+        # Save the devices details to redis for other endpoints
         redis_client.set("devices", json.dumps(devices))
         return devices
     except Exception as e:
         logger.error(f"There seems to be an error: {e}")
 
 
-# Create a new OpenWRT device to be managed by this controller
 def create_device(form):
     try:
         res = openwisp.post(
@@ -50,7 +56,6 @@ def create_device(form):
         return "Cannot create the device"
 
 
-# Get the device groups, which contains OpenWRT devices
 def get_device_group():
     try:
         res = openwisp.get(f"{URI}/controller/groups/")
@@ -61,7 +66,6 @@ def get_device_group():
         logger.error(f"There seems to be an error: {e}")
 
 
-# Get the list of templates (configurations settings) for OpenWRT devices
 def get_template():
     try:
         res = openwisp.get(f"{URI}/controller/template/")
@@ -72,7 +76,15 @@ def get_template():
         logger.error(f"There seems to be an error: {e}")
 
 
-# Get the monitoring metrics of an OpenWRT device
+def create_template(form):
+    try:
+        res = openwisp.post(f"{URI}/controller/template/")
+        res.raise_for_status()
+        return res.json()
+    except Exception as e:
+        logger.error(f"There seems to be an error: {e}")
+
+
 def get_metrics(id):
     try:
         devices = json.loads(redis_client.get("devices"))
@@ -87,3 +99,13 @@ def get_metrics(id):
         return metrics
     except Exception as e:
         logger.error(f"There seems to be an error: {e}")
+
+
+def get_conntrack():
+    result = (
+        luci_rpc.get(f"{LUCI_URI}/sys", json={"method": "net.conntrack"})
+        .json()
+        .get("result")
+    )
+    conntrack = [data for data in result if data["src"] == "172.20.20.20"]
+    return conntrack
