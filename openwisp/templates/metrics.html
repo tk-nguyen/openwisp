@@ -1,11 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 <body>
-    <header>
-        <h2>Device metrics</h2>
-    </header>
     <main>
         <header>
+            <h2>Device metrics</h2>
             <h3>General metrics</h3>
         </header>
         <table>
@@ -19,24 +17,11 @@
             </tbody>
         </table>
         <header>
-            <h3>Conntrack info</h3>
+            <h3>Traffic Control</h3>
         </header>
-        <table>
-            <tbody>
-                <tr>
-                    {% for header in conntrack.0.keys() %}
-                    <td>{{ header }}</td>
-                    {% endfor %}
-                </tr>
-                {% for conn in conntrack %}
-                    <tr>
-                    {% for data in conn.values() %}
-                        <td>{{ data }}</td>
-                    {% endfor %}
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        {% for stats in stdout %}
+        <pre>{{ stats }}</pre>
+        {% endfor %}
     </main>
 </body>
 {% endblock %}

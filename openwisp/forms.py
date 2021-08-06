@@ -13,3 +13,9 @@ class CreateDeviceForm(FlaskForm):
         "MAC address *",
         validators=[InputRequired("Please enter a valid MAC address!"), MacAddress()],
     )
+
+
+class RunCommandForm(FlaskForm):
+    command = StringField(
+        "Command", validators=[InputRequired("Please enter a valid command!")]
+    )

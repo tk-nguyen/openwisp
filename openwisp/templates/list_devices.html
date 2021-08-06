@@ -8,14 +8,15 @@
         <table>
             <thead>
                 <tr>
-                    <th colspan=5>Devices</th>
+                    <th colspan=6>Devices</th>
                 </tr>
                 <tr>
-                    <th>Id</th>
-                    <th>Name</th>
-                    <th>IP</th>
-                    <th>OS</th>
-                    <th>System</th>
+                    <td>Id</td>
+                    <td>Name</td>
+                    <td>IP</td>
+                    <td>OS</td>
+                    <td>System</td>
+                    <td>Run command</td>
                 </tr>
             </thead>
             <tbody>
@@ -26,11 +27,22 @@
                     <td>{{ device.last_ip }}</td>
                     <td>{{ device.os }}</td>
                     <td>{{ device.system }}</td>
+                    <td>
+                        {% if executed %}
+                            {{ form }}
+                        {% else %}
+                        <form method="POST">
+                            {{ form.csrf_token }}
+                            {{ form.command.label }} {{ form.command }}
+                            <button type="submit">Run</button>
+                        </form>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
-                <th colspan=5><a href="/devices/create">Create device</a></th>
+                <th colspan=6><a href="/devices/create">Create device</a></th>
             </tfoot>
         </table>
     </main>
