@@ -25,7 +25,7 @@ openwisp.headers.update(
 luci_rpc = Session()
 LUCI_URI = "http://172.20.20.20/cgi-bin/luci/rpc"
 # Auth against the luci RPC to get the token
-auth = {"id": 2, "method": "login", "params": ["root", "test"]}
+auth = {"id": 1, "method": "login", "params": ["root", "test"]}
 token = luci_rpc.post(f"{LUCI_URI}/auth", json=auth).json().get("result")
 luci_rpc.params.update({"auth": token})
 # Redis connection
@@ -109,22 +109,23 @@ def track_connections():
         result.raise_for_status()
         conntrack = result.json().get("result")
         tracked = []
+        # We're gonna track each connection returned from the call
         for cnt in conntrack:
-            # If the list of tracked connections is empty,
-            # we add the first one return by conntrack
             if len(tracked) == 0 and cnt["layer3"] == "ipv4":
-                trck = Connection(cnt["src"])
-                trck.add_conn(cnt["dst"], cnt["dport"], cnt["bytes"])
-                tracked.append(trck)
+                origin = Connection(cnt["src"])
+                origin.add_conn(cnt["dst"], cnt["dport"], cnt["bytes"])
+                tracked.append(origin)
             elif cnt["layer3"] == "ipv4":
-                for conn in tracked:
-                    if conn.src != cnt["src"]:
-                        trck = Connection(cnt["src"])
+                found = False
+                for trck in tracked:
+                    if trck.src == cnt["src"]:
+                        found = True
                         trck.add_conn(cnt["dst"], cnt["dport"], cnt["bytes"])
-                        tracked.append(trck)
-                    else:
-                        conn.add_conn(cnt["dst"], cnt["dport"], cnt["bytes"])
-                    break
+                        break
+                if not found:
+                    origin = Connection(cnt["src"])
+                    origin.add_conn(cnt["dst"], cnt["dport"], cnt["bytes"])
+                    tracked.append(origin)
         return tracked
     except Exception as e:
         logger.error(f"There seems to be an error: {e}")
@@ -162,21 +163,26 @@ def run_command(command):
 def traffic_control():
     data = track_connections()
     interface = "br-lan"
+    counter = 1
     # First we setup basic stuff:
+    if data is None:
+        return "Error"
+
     run_command(f"tc qdisc add dev {interface} root handle 1: htb default 1")
-    run_command(f"tc class add dev {interface} parent 1: classid 1:1 htb rate 1kbps")
 
     for conn in data:
         for endpoint, bytes in conn.conns.items():
             if bytes > 100:
                 run_command(
-                    f"tc filter add dev {interface} protocol ip parent 1: prio 0 u32 match ip src {endpoint[0]}/32 flowid 1:1"
+                    f"tc class add dev {interface} parent 1: classid 1:{counter} htb rate 1kbps"
                 )
-            break
-        break
+                run_command(
+                    f"tc filter add dev {interface} protocol ip parent 1: prio 0 u32 match ip dst {endpoint[0]}/32 flowid 1:{counter}"
+                )
+                counter += 1
 
     result = []
-    result.append(run_command(f"tc -s -d qdisc show dev {interface}"))
-    result.append(run_command(f"tc -s -d class show dev {interface}"))
-    result.append(run_command(f"tc -s -d filter show dev {interface}"))
+    result.append(run_command(f"tc -s -d -p qdisc show dev {interface}"))
+    result.append(run_command(f"tc -s -d -p class show dev {interface}"))
+    result.append(run_command(f"tc -s -d -p filter show dev {interface}"))
     return result
