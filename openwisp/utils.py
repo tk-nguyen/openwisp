@@ -169,20 +169,43 @@ def traffic_control():
         return "Error"
 
     run_command(f"tc qdisc add dev {interface} root handle 1: htb default 1")
-
+    limited = {}
     for conn in data:
         for endpoint, bytes in conn.conns.items():
-            if bytes > 100:
-                run_command(
-                    f"tc class add dev {interface} parent 1: classid 1:{counter} htb rate 1kbps"
-                )
-                run_command(
-                    f"tc filter add dev {interface} protocol ip parent 1: prio 0 u32 match ip dst {endpoint[0]}/32 flowid 1:{counter}"
-                )
-                counter += 1
+            # Check if class is already created
+            # add the bandwidth limit if it isn't
+            # else change the bandwidth limit
+            if endpoint[0] not in limited:
+                if bytes > 100:
+                    run_command(
+                        f"tc class add dev {interface} parent 1: classid 1:{counter} htb rate {100000/bytes}kbps"
+                    )
+                    run_command(
+                        f"tc filter add dev {interface} protocol ip parent 1: prio 0 u32 match ip dst {endpoint[0]}/32 flowid 1:{counter}"
+                    )
+                    limited[endpoint[0]] = f"1:{counter}"
+                    counter += 1
+            else:
+                if bytes > 100:
+                    run_command(
+                        f"tc class change dev {interface} parent 1: classid {limited[endpoint[0]]} htb rate {100000/bytes}kbps"
+                    )
+                    run_command(
+                        f"tc filter change dev {interface} protocol ip parent 1: prio 0 u32 match ip dst {endpoint[0]}/32 flowid {limited[endpoint[0]]}"
+                    )
 
     result = []
     result.append(run_command(f"tc -s -d -p qdisc show dev {interface}"))
     result.append(run_command(f"tc -s -d -p class show dev {interface}"))
     result.append(run_command(f"tc -s -d -p filter show dev {interface}"))
     return result
+
+
+def reset_traffic_control():
+    interface = "br-lan"
+    output = run_command(f"tc qdisc show dev {interface} root")
+    if output == "":
+        run_command(f"tc qdisc del dev {interface} root")
+        return "Success"
+    else:
+        return "There is no traffic control"

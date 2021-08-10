@@ -19,9 +19,16 @@
         <header>
             <h3>Traffic Control</h3>
         </header>
-        {% for stats in stdout %}
-        <pre>{{ stats }}</pre>
-        {% endfor %}
+        {% if reset %}
+            <p>{{ message }}</p>
+        {% else %}
+            {% for stats in stdout %}
+                <pre>{{ stats }}</pre>
+            {% endfor %}
+            <form method="POST" action="/device/{{ id }}/reset">
+                <button>Reset traffic control</button>
+            </form>
+        {% endif %}
     </main>
 </body>
 {% endblock %}

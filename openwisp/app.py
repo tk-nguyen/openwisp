@@ -6,8 +6,8 @@ from openwisp.utils import (
     get_metrics,
     get_template,
     create_device,
+    reset_traffic_control,
     run_command,
-    track_connections,
     traffic_control,
 )
 from openwisp.forms import CreateDeviceForm, RunCommandForm
@@ -56,7 +56,15 @@ def create_new_device():
 def metrics(id):
     metrics = get_metrics(id - 1)
     commands = traffic_control()
-    return render_template("metrics.html", metrics=metrics, stdout=commands)
+    return render_template("metrics.html", metrics=metrics, stdout=commands, id=id)
+
+
+@app.route("/device/<int:id>/reset", methods=["POST"])
+def reset(id):
+    message = reset_traffic_control()
+    return render_template(
+        "metrics.html", metrics={}, id=id, reset=True, message=message
+    )
 
 
 @app.route("/templates")
