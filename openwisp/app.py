@@ -55,13 +55,13 @@ def create_new_device():
 @app.route("/devices/<int:id>")
 def metrics(id):
     metrics = get_metrics(id - 1)
-    commands = traffic_control()
+    commands = traffic_control(id - 1)
     return render_template("metrics.html", metrics=metrics, stdout=commands, id=id)
 
 
 @app.route("/device/<int:id>/reset", methods=["POST"])
 def reset(id):
-    message = reset_traffic_control()
+    message = reset_traffic_control(id - 1)
     return render_template(
         "metrics.html", metrics={}, id=id, reset=True, message=message
     )

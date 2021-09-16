@@ -131,12 +131,14 @@ def track_connections():
         logger.error(f"There seems to be an error: {e}")
 
 
-def run_command(command):
+def run_command(command, id):
     try:
         # Run the command by POSTing
         payload = {"input": {"command": f"{command}"}, "type": "custom"}
+        devices = json.loads(redis_client.get("devices"))
+        device_id = devices[id].get("id")
         result = openwisp.post(
-            f"{OPENWISP_URI}/controller/device/5fb06af2-3ada-41b6-bb13-52d46ef3a9ee/command/",
+            f"{OPENWISP_URI}/controller/device/{device_id}/command/",
             json=payload,
         )
         result.raise_for_status()
@@ -145,7 +147,7 @@ def run_command(command):
         success = False
         while not success:
             output = openwisp.get(
-                f"{OPENWISP_URI}/controller/device/5fb06af2-3ada-41b6-bb13-52d46ef3a9ee/command/{command_id}/"
+                f"{OPENWISP_URI}/controller/device/{device_id}/command/{command_id}/"
             )
             output.raise_for_status()
             status = output.json().get("status")
@@ -160,7 +162,7 @@ def run_command(command):
         logger.error(f"There seems to be an error: {e}")
 
 
-def traffic_control():
+def traffic_control(id):
     data = track_connections()
     interface = "br-lan"
     counter = 1
@@ -168,7 +170,7 @@ def traffic_control():
     if data is None:
         return "Error"
 
-    run_command(f"tc qdisc add dev {interface} root handle 1: htb default 1")
+    run_command(f"tc qdisc add dev {interface} root handle 1: htb default 1", id)
     limited = {}
     for conn in data:
         for endpoint, bytes in conn.conns.items():
@@ -178,34 +180,38 @@ def traffic_control():
             if endpoint[0] not in limited:
                 if bytes > 100:
                     run_command(
-                        f"tc class add dev {interface} parent 1: classid 1:{counter} htb rate {100000/bytes}kbps"
+                        f"tc class add dev {interface} parent 1: classid 1:{counter} htb rate {100000/bytes}kbps",
+                        id,
                     )
                     run_command(
-                        f"tc filter add dev {interface} protocol ip parent 1: prio 0 u32 match ip dst {endpoint[0]}/32 flowid 1:{counter}"
+                        f"tc filter add dev {interface} protocol ip parent 1: prio 0 u32 match ip dst {endpoint[0]}/32 flowid 1:{counter}",
+                        id,
                     )
                     limited[endpoint[0]] = f"1:{counter}"
                     counter += 1
             else:
                 if bytes > 100:
                     run_command(
-                        f"tc class change dev {interface} parent 1: classid {limited[endpoint[0]]} htb rate {100000/bytes}kbps"
+                        f"tc class change dev {interface} parent 1: classid {limited[endpoint[0]]} htb rate {100000/bytes}kbps",
+                        id,
                     )
                     run_command(
-                        f"tc filter change dev {interface} protocol ip parent 1: prio 0 u32 match ip dst {endpoint[0]}/32 flowid {limited[endpoint[0]]}"
+                        f"tc filter change dev {interface} protocol ip parent 1: prio 0 u32 match ip dst {endpoint[0]}/32 flowid {limited[endpoint[0]]}",
+                        id,
                     )
 
     result = []
-    result.append(run_command(f"tc -s -d -p qdisc show dev {interface}"))
-    result.append(run_command(f"tc -s -d -p class show dev {interface}"))
-    result.append(run_command(f"tc -s -d -p filter show dev {interface}"))
+    result.append(run_command(f"tc -s -d -p qdisc show dev {interface}", id))
+    result.append(run_command(f"tc -s -d -p class show dev {interface}", id))
+    result.append(run_command(f"tc -s -d -p filter show dev {interface}", id))
     return result
 
 
-def reset_traffic_control():
+def reset_traffic_control(id):
     interface = "br-lan"
-    output = run_command(f"tc qdisc show dev {interface} root")
+    output = run_command(f"tc qdisc show dev {interface} root", id)
     if output == "":
-        run_command(f"tc qdisc del dev {interface} root")
+        run_command(f"tc qdisc del dev {interface} root", id)
         return "Success"
     else:
         return "There is no traffic control"
