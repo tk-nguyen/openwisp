@@ -131,6 +131,7 @@ def track_connections():
         logger.error(f"There seems to be an error: {e}")
 
 
+# Run a command on the specified openwrt device
 def run_command(command, id):
     try:
         # Run the command by POSTing
@@ -162,9 +163,26 @@ def run_command(command, id):
         logger.error(f"There seems to be an error: {e}")
 
 
+# Parse the /etc/services file for service port and protocol
+def map_services(id):
+    # The output is "<app>\t\t<port>/<proto>\n", so we split twice
+    output = run_command("cat /etc/services", id).strip().split("\n")
+    svcs = {}
+    for sv in output:
+        tmp = sv.split()
+        app = tmp[0]
+        # We only care about the port,
+        port = tmp[1].split("/")[0]
+        if app not in svcs:
+            svcs[app] = port
+    return svcs
+
+
+# Limit the traffic
 def traffic_control(id):
     data = track_connections()
     interface = "br-lan"
+    max_speed = int(run_command("cat /sys/class/net/eth0/speed", id)) * 1000
     counter = 1
     # First we setup basic stuff:
     if data is None:
@@ -180,7 +198,7 @@ def traffic_control(id):
             if endpoint[0] not in limited:
                 if bytes > 100:
                     run_command(
-                        f"tc class add dev {interface} parent 1: classid 1:{counter} htb rate {100000/bytes}kbps",
+                        f"tc class add dev {interface} parent 1: classid 1:{counter} htb rate {max_speed/bytes}kbps",
                         id,
                     )
                     run_command(
@@ -192,7 +210,7 @@ def traffic_control(id):
             else:
                 if bytes > 100:
                     run_command(
-                        f"tc class change dev {interface} parent 1: classid {limited[endpoint[0]]} htb rate {100000/bytes}kbps",
+                        f"tc class change dev {interface} parent 1: classid {limited[endpoint[0]]} htb rate {max_speed/bytes}kbps",
                         id,
                     )
                     run_command(

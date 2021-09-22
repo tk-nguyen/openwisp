@@ -8,7 +8,7 @@
         <table>
             <thead>
                 <tr>
-                    <th colspan=6>Devices</th>
+                    <th colspan=7>Devices</th>
                 </tr>
                 <tr>
                     <td>Id</td>
@@ -23,7 +23,7 @@
                 {% for device in devices %}
                 <tr>
                     <td>{{ loop.index }}</td>
-                    <td><a href="/devices/{{ loop.index }}">{{ device.name }}</a></td>
+                    <td><a href="{{ url_for('metrics', id=loop.index) }}">{{ device.name }}</a></td>
                     <td>{{ device.last_ip }}</td>
                     <td>{{ device.os }}</td>
                     <td>{{ device.system }}</td>
@@ -42,7 +42,7 @@
                 {% endfor %}
             </tbody>
             <tfoot>
-                <th colspan=6><a href="/devices/create">Create device</a></th>
+                <th colspan=6><a href="{{ url_for('create_new_device') }}">Create device</a></th>
             </tfoot>
         </table>
     </main>

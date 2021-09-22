@@ -6,6 +6,7 @@ from openwisp.utils import (
     get_metrics,
     get_template,
     create_device,
+    map_services,
     reset_traffic_control,
     run_command,
     traffic_control,
@@ -59,7 +60,7 @@ def metrics(id):
     return render_template("metrics.html", metrics=metrics, stdout=commands, id=id)
 
 
-@app.route("/device/<int:id>/reset", methods=["POST"])
+@app.route("/devices/<int:id>/reset", methods=["POST"])
 def reset(id):
     message = reset_traffic_control(id - 1)
     return render_template(
