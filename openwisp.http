@@ -16,13 +16,13 @@ GET http://172.20.20.20/cgi-bin/luci/rpc/uci?auth=:token
 # Get conntrack
 GET http://172.20.20.20/cgi-bin/luci/rpc/sys?auth=:token
 {
-    "method": "net.conntrack"
+    "method": "net.ipv4_hints"
 }
 
 # Get interface info
 GET http://172.20.20.20/cgi-bin/luci/rpc/sys?auth=:token
 {
-    "method": "net.devices"
+    "method": "net.deviceinfo"
 }
 
 # Get the password for an user

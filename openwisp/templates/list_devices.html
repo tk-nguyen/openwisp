@@ -17,6 +17,7 @@
                     <td>OS</td>
                     <td>System</td>
                     <td>Run command</td>
+                    <td>Clients</td>
                 </tr>
             </thead>
             <tbody>
@@ -38,6 +39,7 @@
                         </form>
                         {% endif %}
                     </td>
+                    <td><a href="{{ url_for('clients', id=loop.index) }}">Clients</a></td>
                 </tr>
                 {% endfor %}
             </tbody>

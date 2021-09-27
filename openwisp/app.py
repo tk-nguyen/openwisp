@@ -1,12 +1,12 @@
 from flask import Flask, jsonify, render_template, request, redirect
 from flask.helpers import url_for
 from openwisp.utils import (
+    get_clients,
     get_device,
     get_device_group,
     get_metrics,
     get_template,
     create_device,
-    map_services,
     reset_traffic_control,
     run_command,
     traffic_control,
@@ -66,6 +66,11 @@ def reset(id):
     return render_template(
         "metrics.html", metrics={}, id=id, reset=True, message=message
     )
+
+
+@app.route("/devices/<int:id>/clients")
+def clients(id):
+    return jsonify(get_clients(id))
 
 
 @app.route("/templates")

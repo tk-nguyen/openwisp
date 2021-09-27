@@ -26,7 +26,7 @@ luci_rpc = Session()
 LUCI_URI = "http://172.20.20.20/cgi-bin/luci/rpc"
 # Auth against the luci RPC to get the token
 auth = {"id": 1, "method": "login", "params": ["root", "test"]}
-token = luci_rpc.post(f"{LUCI_URI}/auth", json=auth).json().get("result")
+token = luci_rpc.post(f"{LUCI_URI}/auth", json=auth).json()["result"]
 luci_rpc.params.update({"auth": token})
 # Redis connection
 redis_client = redis.from_url(os.environ["REDIS_URL"])
@@ -36,7 +36,7 @@ def get_device():
     try:
         res = openwisp.get(f"{OPENWISP_URI}/controller/device/")
         res.raise_for_status()
-        devices = res.json().get("results")
+        devices = res.json()["results"]
         # Save the devices details to redis for other endpoints
         redis_client.set("devices", json.dumps(devices))
         return devices
@@ -61,7 +61,7 @@ def get_device_group():
     try:
         res = openwisp.get(f"{OPENWISP_URI}/controller/groups/")
         res.raise_for_status()
-        device_group = res.json().get("results")
+        device_group = res.json()["results"]
         return device_group
     except Exception as e:
         logger.error(f"There seems to be an error: {e}")
@@ -71,7 +71,7 @@ def get_template():
     try:
         res = openwisp.get(f"{OPENWISP_URI}/controller/template/")
         res.raise_for_status()
-        templates = res.json().get("results")
+        templates = res.json()["results"]
         return templates
     except Exception as e:
         logger.error(f"There seems to be an error: {e}")
@@ -89,14 +89,14 @@ def create_template(form):
 def get_metrics(id):
     try:
         devices = json.loads(redis_client.get("devices"))
-        device_id = devices[id].get("id")
-        device_key = devices[id].get("key")
+        device_id = devices[id]["id"]
+        device_key = devices[id]["key"]
         res = openwisp.get(
             f"{OPENWISP_URI}/monitoring/device/{device_id}/",
             params={"key": device_key, "status": "true"},
         )
         res.raise_for_status()
-        metrics = res.json().get("data")
+        metrics = res.json()["data"]
         return metrics
     except Exception as e:
         logger.error(f"There seems to be an error: {e}")
@@ -107,7 +107,7 @@ def track_connections():
     try:
         result = luci_rpc.get(f"{LUCI_URI}/sys", json={"method": "net.conntrack"})
         result.raise_for_status()
-        conntrack = result.json().get("result")
+        conntrack = result.json()["result"]
         tracked = []
         # We're gonna track each connection returned from the call
         for cnt in conntrack:
@@ -137,28 +137,28 @@ def run_command(command, id):
         # Run the command by POSTing
         payload = {"input": {"command": f"{command}"}, "type": "custom"}
         devices = json.loads(redis_client.get("devices"))
-        device_id = devices[id].get("id")
+        device_id = devices[id]["id"]
         result = openwisp.post(
             f"{OPENWISP_URI}/controller/device/{device_id}/command/",
             json=payload,
         )
         result.raise_for_status()
         # Get the command result
-        command_id = result.json().get("id")
+        command_id = result.json()["id"]
         success = False
         while not success:
             output = openwisp.get(
                 f"{OPENWISP_URI}/controller/device/{device_id}/command/{command_id}/"
             )
             output.raise_for_status()
-            status = output.json().get("status")
+            status = output.json()["status"]
             if status == "success":
                 success = True
-                return output.json().get("output")
+                return output.json()["output"]
             elif status == "in-progress":
                 time.sleep(2)
             elif status == "failed":
-                return output.json().get("output")
+                return output.json()["output"]
     except Exception as e:
         logger.error(f"There seems to be an error: {e}")
 
@@ -182,16 +182,30 @@ def map_services(id):
 def traffic_control(id):
     data = track_connections()
     interface = "br-lan"
+
     max_speed = int(run_command("cat /sys/class/net/eth0/speed", id)) * 1000
     counter = 1
+
     # First we setup basic stuff:
     if data is None:
         return "Error"
-
+    services = map_services(id)
+    # Delete the root qdisc
     run_command(f"tc qdisc add dev {interface} root handle 1: htb default 1", id)
+
     limited = {}
+    priority = 1
     for conn in data:
         for endpoint, bytes in conn.conns.items():
+            if int(endpoint[1]) == services["ssh"]:
+                priority = 1
+            elif (
+                int(endpoint[1]) == services["www"]
+                or int(endpoint[1]) == services["https"]
+            ):
+                priority = 2
+            else:
+                priority = 10
             # Check if class is already created
             # add the bandwidth limit if it isn't
             # else change the bandwidth limit
@@ -201,8 +215,9 @@ def traffic_control(id):
                         f"tc class add dev {interface} parent 1: classid 1:{counter} htb rate {max_speed/bytes}kbps",
                         id,
                     )
+
                     run_command(
-                        f"tc filter add dev {interface} protocol ip parent 1: prio 0 u32 match ip dst {endpoint[0]}/32 flowid 1:{counter}",
+                        f"tc filter add dev {interface} protocol ip parent 1: prio {priority} u32 match ip dst {endpoint[0]}/32 flowid 1:{counter}",
                         id,
                     )
                     limited[endpoint[0]] = f"1:{counter}"
@@ -223,6 +238,24 @@ def traffic_control(id):
     result.append(run_command(f"tc -s -d -p class show dev {interface}", id))
     result.append(run_command(f"tc -s -d -p filter show dev {interface}", id))
     return result
+
+
+def get_clients(id):
+    try:
+        payload = {"method": "net.ipv4_hints"}
+        clients = luci_rpc.get(f"{LUCI_URI}/sys", json=payload).json()["result"]
+        payload = {"method": "get_all", "params": ["network"]}
+        # Get the gateway
+        networks = luci_rpc.get(f"{LUCI_URI}/uci", json=payload).json()
+        gateway = networks["result"]["lan"]["gateway"]
+        # Then delete it from the list of clients
+        for index, c in enumerate(clients):
+            if c[0] == gateway:
+                del clients[index]
+                break
+        return clients
+    except Exception as e:
+        logger.error(f"There seems to be an error: {e}")
 
 
 def reset_traffic_control(id):
