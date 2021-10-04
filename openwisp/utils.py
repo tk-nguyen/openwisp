@@ -183,13 +183,14 @@ def traffic_control(id):
     data = track_connections()
     interface = "br-lan"
 
-    max_speed = int(run_command("cat /sys/class/net/eth0/speed", id)) * 1000
+    max_speed = int(run_command("cat /sys/class/net/eth0/speed", id)) * 1000  # Kbps
     counter = 1
 
     # First we setup basic stuff:
     if data is None:
         return "Error"
     services = map_services(id)
+    clients = get_clients(id)
     # Delete the root qdisc
     run_command(f"tc qdisc add dev {interface} root handle 1: htb default 1", id)
 
@@ -212,7 +213,7 @@ def traffic_control(id):
             if endpoint[0] not in limited:
                 if bytes > 100:
                     run_command(
-                        f"tc class add dev {interface} parent 1: classid 1:{counter} htb rate {max_speed/bytes}kbps",
+                        f"tc class add dev {interface} parent 1: classid 1:{counter} htb rate {max_speed/(len(clients)*bytes)}kbps",
                         id,
                     )
 
@@ -225,7 +226,7 @@ def traffic_control(id):
             else:
                 if bytes > 100:
                     run_command(
-                        f"tc class change dev {interface} parent 1: classid {limited[endpoint[0]]} htb rate {max_speed/bytes}kbps",
+                        f"tc class change dev {interface} parent 1: classid {limited[endpoint[0]]} htb rate {max_speed/(len(clients)*bytes)}kbps",
                         id,
                     )
                     run_command(
