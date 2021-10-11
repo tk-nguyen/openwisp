@@ -2,7 +2,7 @@
 
 ## First, prepare 2 virtual machines:
 - 1 machine running Debian 10, will be running OpenWISP
-- 1 machine running OpenWRT, downloaded from https://downloads.openwrt.org/releases/21.02.0-rc3/targets/x86/64/
+- 1 machine running OpenWRT, downloaded from https://downloads.openwrt.org/releases/21.02.0/targets/x86/64/
 
 ## Setting up OpenWISP 
 ### Installing OpenWISP

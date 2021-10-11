@@ -212,8 +212,9 @@ def traffic_control(id):
             # else change the bandwidth limit
             if endpoint[0] not in limited:
                 if bytes > 100:
+                    max_bandwidth = max_speed / (len(clients) * bytes)
                     run_command(
-                        f"tc class add dev {interface} parent 1: classid 1:{counter} htb rate {max_speed/(len(clients)*bytes)}kbps",
+                        f"tc class add dev {interface} parent 1: classid 1:{counter} htb rate {max_bandwidth}kbps",
                         id,
                     )
 
@@ -221,12 +222,15 @@ def traffic_control(id):
                         f"tc filter add dev {interface} protocol ip parent 1: prio {priority} u32 match ip dst {endpoint[0]}/32 flowid 1:{counter}",
                         id,
                     )
-                    limited[endpoint[0]] = f"1:{counter}"
+                    limited[endpoint[0]] = {
+                        "classid": f"1:{counter}",
+                        "bandwidth": max_bandwidth,
+                    }
                     counter += 1
             else:
                 if bytes > 100:
                     run_command(
-                        f"tc class change dev {interface} parent 1: classid {limited[endpoint[0]]} htb rate {max_speed/(len(clients)*bytes)}kbps",
+                        f"tc class change dev {interface} parent 1: classid {limited[endpoint[0]]['classid']} htb rate {max_speed/(len(clients)*bytes)}kbps",
                         id,
                     )
                     run_command(
@@ -235,6 +239,8 @@ def traffic_control(id):
                     )
 
     result = []
+    # Save the limits in redis
+    redis_client.set("limits", json.dumps(limited))
     result.append(run_command(f"tc -s -d -p qdisc show dev {interface}", id))
     result.append(run_command(f"tc -s -d -p class show dev {interface}", id))
     result.append(run_command(f"tc -s -d -p filter show dev {interface}", id))
