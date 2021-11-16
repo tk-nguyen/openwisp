@@ -16,7 +16,7 @@ GET http://172.20.20.20/cgi-bin/luci/rpc/uci?auth=:token
 # Get conntrack
 GET http://172.20.20.20/cgi-bin/luci/rpc/sys?auth=:token
 {
-    "method": "net.ipv4_hints"
+    "method": "net.conntrack"
 }
 
 # Get interface info
