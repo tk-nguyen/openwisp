@@ -191,11 +191,14 @@ def traffic_control(id):
     services = map_services(id)
     clients = get_clients(id)
     # Delete the root qdisc
-    run_command(f"tc qdisc del dev {interface} root", id)
-    run_command(f"tc qdisc add dev {interface} root handle 1: htb default 1", id)
-    run_command(f"tc class add dev {interface} parent 1: classid 1:1 htb rate 1mbps ceil 1mbps ", id)
+    output = str(run_command(f"tc qdisc show dev {interface} root", id))
+    if "htb" not in output:
+        run_command(f"tc qdisc add dev {interface} root handle 1: htb default 1", id)
+        run_command(f"tc class add dev {interface} parent 1: classid 1:1 htb rate 1mbps ceil 1mbps ", id)
+        limited = {}
+    else:
+        limited = json.loads(redis_client.get("limits"))
 
-    limited = {}
     priority = 1
     counter = 2
     for conn in data:
@@ -235,6 +238,10 @@ def traffic_control(id):
                         f"tc class change dev {interface} parent 1:1 classid {limited[endpoint[0]]['classid']} htb rate {max_speed/(len(clients)*bytes)}kbps ceil 1mbps",
                         id,
                     )
+                    run_command(
+                        f"tc filter add dev {interface} protocol ip parent 1:1 prio {priority} u32 match ip dst {endpoint[0]}/32 flowid 1:{counter}",
+                        id,
+                    )
 
     result = []
     # Save the limits in redis
@@ -266,7 +273,7 @@ def get_clients(id):
 def reset_traffic_control(id):
     interface = "br-lan"
     output = run_command(f"tc qdisc show dev {interface} root", id)
-    if output == "":
+    if output != "":
         run_command(f"tc qdisc del dev {interface} root", id)
         return "Success"
     else:
