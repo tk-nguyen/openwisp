@@ -8,14 +8,14 @@
 ### Installing OpenWISP
 - Create a virtualenv named `openwisp-dev` and activate it:
 ```bash
-$ python3 -m venv openwisp-dev
-$ source openwisp-dev/bin/activate
-$ cd openwisp-dev
+python3 -m venv openwisp-dev
+source openwisp-dev/bin/activate
+cd openwisp-dev
 ```
 
 - Create the `roles` and `collections` folders for ansible:
 ```bash
-$ mkdir roles collections
+mkdir roles collections
 ```
 
 - Create `ansible.cfg` with the following contents:
@@ -40,7 +40,7 @@ collections:
 
 - Install requirements from `requirements.yml`:
 ```bash
-$ ansible-galaxy install -r requirements.yml
+ansible-galaxy install -r requirements.yml
 ```
 
 - Create `hosts` with the following contents:
@@ -56,6 +56,7 @@ $ ansible-galaxy install -r requirements.yml
   roles:
     - openwisp.openwisp2-dev
   vars:
+    postfix_myhostname: localhost
     openwisp2_network_topology: true
     openwisp2_firmware_upgrader: true
     openwisp2_monitoring: true # monitoring is enabled by default
@@ -67,7 +68,7 @@ $ ansible-galaxy install -r requirements.yml
 
 - Run the playbook:
 ```bash
-$ ansible-playbook -i hosts playbook.yml -k --become -K
+ansible-playbook -i hosts playbook.yml -k --become -K
 ```
 
 - Restart `supervisor`:
@@ -92,6 +93,6 @@ config controller 'http'
 ![token](screenshots/token.png)
 - Restart `openwisp_config`:
 ```bash
-# /etc/init.d/openwisp_config restart
+/etc/init.d/openwisp_config restart
 ```
 
