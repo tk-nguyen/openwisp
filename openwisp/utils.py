@@ -5,6 +5,7 @@ import time
 import redis
 from openwisp.connection import Connection
 from requests.sessions import Session
+from celery import shared_task
 
 logging.captureWarnings(True)
 logger = logging.getLogger(__name__)
@@ -15,6 +16,11 @@ logger.info("Starting the openwisp watcher...")
 OPENWISP_URI = "https://172.20.20.10/api/v1"
 openwisp = Session()
 openwisp.verify = False
+# auth = {
+#     "username": os.environ["OPENWISP_USERNAME"],
+#     "password": os.environ["OPENWISP_PASSWORD"],
+# }
+# token = openwisp.post(f"{OPENWISP_URI}/user/token/", json=auth).json()["token"]
 openwisp.headers.update(
     {
         "Authorization": f"Bearer {os.environ['TOKEN']}",
@@ -179,6 +185,7 @@ def map_services(id):
 
 
 # Limit the traffic
+@shared_task
 def traffic_control(id):
     data = track_connections()
     interface = "br-lan"
@@ -194,7 +201,10 @@ def traffic_control(id):
     output = str(run_command(f"tc qdisc show dev {interface} root", id))
     if "htb" not in output:
         run_command(f"tc qdisc add dev {interface} root handle 1: htb default 1", id)
-        run_command(f"tc class add dev {interface} parent 1: classid 1:1 htb rate 1mbps ceil 1mbps ", id)
+        run_command(
+            f"tc class add dev {interface} parent 1: classid 1:1 htb rate 1mbps ceil 1mbps ",
+            id,
+        )
         limited = {}
     else:
         limited = json.loads(redis_client.get("limits"))

@@ -11,6 +11,7 @@ Flask = "^2.0.1"
 python-dotenv = "^0.18.0"
 redis = "^3.5.3"
 Flask-WTF = "^0.15.1"
+celery = "^5.2.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

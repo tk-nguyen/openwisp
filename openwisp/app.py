@@ -1,3 +1,4 @@
+import os
 from flask import Flask, jsonify, render_template, request, redirect
 from flask.helpers import url_for
 from openwisp.utils import (
@@ -12,12 +13,24 @@ from openwisp.utils import (
     traffic_control,
 )
 from openwisp.forms import CreateDeviceForm, RunCommandForm
-from dotenv import load_dotenv
-import os
+from openwisp.tasks import make_celery
+from celery.schedules import crontab
 
-load_dotenv()
+# Basic setup stuff
 app = Flask(__name__)
 app.secret_key = os.environ["SECRET_KEY"]
+app.config.update(
+    broker_url=os.environ["REDIS_URL"],
+    result_backend=os.environ["REDIS_URL"],
+)
+celery = make_celery(app)
+celery.conf.beat_schedule = {
+    "traffic_control": {
+        "task": "openwisp.utils.traffic_control",
+        "schedule": crontab(minute="*/5"),
+        "args": {"id": 0},
+    },
+}
 
 
 @app.route("/")
@@ -77,3 +90,8 @@ def clients(id):
 def list_templates():
     templates = get_template()
     return render_template("list_templates.html", templates=templates)
+
+
+@celery.task
+def test(a, b):
+    return a + b
