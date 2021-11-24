@@ -90,8 +90,3 @@ def clients(id):
 def list_templates():
     templates = get_template()
     return render_template("list_templates.html", templates=templates)
-
-
-@celery.task
-def test(a, b):
-    return a + b
