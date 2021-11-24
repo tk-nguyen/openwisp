@@ -2,11 +2,7 @@ from celery import Celery
 
 
 def make_celery(app):
-    celery = Celery(
-        app.import_name,
-        backend=app.config["result_backend"],
-        broker=app.config["broker_url"],
-    )
+    celery = Celery(app.import_name)
     celery.conf.update(app.config)
 
     class ContextTask(celery.Task):
