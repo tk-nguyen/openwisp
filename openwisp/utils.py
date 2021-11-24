@@ -162,7 +162,7 @@ def run_command(command, id):
                 success = True
                 return output.json()["output"]
             elif status == "in-progress":
-                time.sleep(2)
+                time.sleep(5)
             elif status == "failed":
                 return output.json()["output"]
     except Exception as e:
@@ -172,7 +172,7 @@ def run_command(command, id):
 # Parse the /etc/services file for service port and protocol
 def map_services(id):
     # The output is "<app>\t\t<port>/<proto>\n", so we split twice
-    output = run_command("cat /etc/services", id).strip().split("\n")
+    output = str(run_command("cat /etc/services", id)).strip().split("\n")
     svcs = {}
     for sv in output:
         tmp = sv.split()
@@ -185,11 +185,9 @@ def map_services(id):
 
 
 # Limit the traffic
-@shared_task
 def traffic_control(id):
     data = track_connections()
     interface = "br-lan"
-
     max_speed = int(run_command("cat /sys/class/net/eth0/speed", id)) * 1000  # Kbps
 
     # First we setup basic stuff:
@@ -288,3 +286,14 @@ def reset_traffic_control(id):
         return "Success"
     else:
         return "There is no traffic control"
+
+
+@shared_task
+def run_traffic_control(ids):
+    results_per_id = {}
+    try:
+        for id in ids:
+            results_per_id[id] = traffic_control(id)
+        return results_per_id
+    except Exception as e:
+        logger.error(f"There seems to be an error: {e}")

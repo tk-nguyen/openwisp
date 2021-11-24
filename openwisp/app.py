@@ -1,4 +1,5 @@
 import os
+import json
 from flask import Flask, jsonify, render_template, request, redirect
 from flask.helpers import url_for
 from openwisp.utils import (
@@ -15,6 +16,7 @@ from openwisp.utils import (
 from openwisp.forms import CreateDeviceForm, RunCommandForm
 from openwisp.tasks import make_celery
 from celery.schedules import crontab
+import redis
 
 # Basic setup stuff
 app = Flask(__name__)
@@ -26,10 +28,20 @@ app.config.update(
 celery = make_celery(app)
 celery.conf.beat_schedule = {
     "traffic_control": {
-        "task": "openwisp.utils.traffic_control",
+        "task": "openwisp.utils.run_traffic_control",
         "schedule": crontab(minute="*/5"),
-        "args": {"id": 0},
-    },
+        "args": (
+            list(
+                range(
+                    len(
+                        json.loads(
+                            redis.Redis.from_url(os.environ["REDIS_URL"]).get("devices")
+                        )
+                    )
+                )
+            ),
+        ),
+    }
 }
 
 
