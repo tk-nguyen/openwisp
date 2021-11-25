@@ -189,12 +189,14 @@ def traffic_control(id):
     data = track_connections()
     interface = "br-lan"
     max_speed = int(run_command("cat /sys/class/net/eth0/speed", id)) * 1000  # Kbps
+    # limit = max_speed/20
+    bandwidth_limit = 100
 
     # First we setup basic stuff:
     if data is None:
         return "Error"
     services = map_services(id)
-    clients = get_clients(id)
+    num_clients = get_clients(id)
     # Delete the root qdisc
     output = str(run_command(f"tc qdisc show dev {interface} root", id))
     if "htb" not in output:
@@ -224,15 +226,15 @@ def traffic_control(id):
             # add the bandwidth limit if it isn't
             # else change the bandwidth limit
             if endpoint[0] not in limited:
-                if bytes > 100:
-                    max_bandwidth = max_speed / (len(clients) * bytes)
+                if bytes > bandwidth_limit:
+                    max_bandwidth = max_speed / num_clients
                     run_command(
                         f"tc class add dev {interface} parent 1:1 classid 1:{counter} htb rate {max_bandwidth}kbps ceil 1mbps",
                         id,
                     )
 
                     run_command(
-                        f"tc filter add dev {interface} protocol ip parent 1:1 prio {priority} u32 match ip dst {endpoint[0]}/32 flowid 1:{counter}",
+                        f"tc filter add dev {interface} protocol ip parent 1: prio {priority} u32 match ip src {conn.src}/32 match ip dst {endpoint[0]}/32 flowid 1:{counter}",
                         id,
                     )
                     limited[endpoint[0]] = {
@@ -240,14 +242,17 @@ def traffic_control(id):
                         "bandwidth": max_bandwidth,
                     }
                     counter += 1
+                    num_clients -= 1
+                else:
+                    max_speed -= bytes
             else:
-                if bytes > 100:
+                if bytes > bandwidth_limit:
                     run_command(
-                        f"tc class change dev {interface} parent 1:1 classid {limited[endpoint[0]]['classid']} htb rate {max_speed/(len(clients)*bytes)}kbps ceil 1mbps",
+                        f"tc class change dev {interface} parent 1:1 classid {limited[endpoint[0]]['classid']} htb rate {max_bandwidth}kbps ceil 1mbps",
                         id,
                     )
                     run_command(
-                        f"tc filter add dev {interface} protocol ip parent 1:1 prio {priority} u32 match ip dst {endpoint[0]}/32 flowid 1:{counter}",
+                        f"tc filter add dev {interface} protocol ip parent 1: prio {priority} u32 match ip src {conn.src}/32 match ip dst {endpoint[0]}/32 flowid {limited[endpoint[0]]['classid']}",
                         id,
                     )
 
@@ -273,7 +278,7 @@ def get_clients(id):
             if c[0] == gateway:
                 del clients[index]
                 break
-        return clients
+        return len(clients)
     except Exception as e:
         logger.error(f"There seems to be an error: {e}")
 
