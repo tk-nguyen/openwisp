@@ -188,7 +188,8 @@ def map_services(id):
 def traffic_control(id):
     data = track_connections()
     interface = "br-lan"
-    max_speed = int(run_command("cat /sys/class/net/eth0/speed", id)) * 1000  # Kbps
+    # max_speed = int(run_command("cat /sys/class/net/eth0/speed", id)) * 1000  # Kbps
+    max_speed = 10000
     # limit = max_speed/20
     bandwidth_limit = 100
 
@@ -202,15 +203,18 @@ def traffic_control(id):
     if "htb" not in output:
         run_command(f"tc qdisc add dev {interface} root handle 1: htb default 1", id)
         run_command(
-            f"tc class add dev {interface} parent 1: classid 1:1 htb rate 1mbps ceil 1mbps ",
+            f"tc class add dev {interface} parent 1: classid 1:1 htb rate {max_speed}kbit ceil {max_speed}kbit ",
             id,
         )
         limited = {}
+        filters = {}
     else:
         limited = json.loads(redis_client.get("limits"))
+        filters = json.loads(redis_client.get("filters"))
 
     priority = 1
     counter = 2
+    filter_counter = 100
     for conn in data:
         for endpoint, bytes in conn.conns.items():
             if int(endpoint[1]) == services["ssh"]:
@@ -229,36 +233,49 @@ def traffic_control(id):
                 if bytes > bandwidth_limit:
                     max_bandwidth = max_speed / num_clients
                     run_command(
-                        f"tc class add dev {interface} parent 1:1 classid 1:{counter} htb rate {max_bandwidth}kbps ceil 1mbps",
+                        f"tc class add dev {interface} parent 1:1 classid 1:{counter} htb rate {max_bandwidth}kbit ceil {bandwidth_limit}kbit",
                         id,
                     )
 
                     run_command(
-                        f"tc filter add dev {interface} protocol ip parent 1: prio {priority} u32 match ip src {conn.src}/32 match ip dst {endpoint[0]}/32 flowid 1:{counter}",
+                        f"tc filter add dev {interface} protocol ip parent 1: handle ::{filter_counter} prio {priority} u32 match ip src {endpoint[0]} match ip dst {conn.src} flowid 1:{counter}",
                         id,
                     )
                     limited[endpoint[0]] = {
                         "classid": f"1:{counter}",
                         "bandwidth": max_bandwidth,
                     }
+                    filters[endpoint[0]] = {
+                        "filter_handle": filter_counter,
+                        "priority": priority
+                    }
                     counter += 1
-                    num_clients -= 1
+                    filter_counter += 1
+                    if num_clients > 1:
+                        num_clients -= 1
+                    else:
+                        break
                 else:
                     max_speed -= bytes
             else:
                 if bytes > bandwidth_limit:
+                    max_bandwidth = max_speed / num_clients
                     run_command(
-                        f"tc class change dev {interface} parent 1:1 classid {limited[endpoint[0]]['classid']} htb rate {max_bandwidth}kbps ceil 1mbps",
+                        f"tc class change dev {interface} parent 1:1 classid {limited[endpoint[0]]['classid']} htb rate {max_bandwidth}kbit ceil {bandwidth_limit}kbit",
                         id,
                     )
+                    # run_command(f"tc filter del dev {interface} handle 800::{filters[endpoint[0]]['filter_handle']} prio {filters[endpoint[0]]['priority']} u32", id)
                     run_command(
-                        f"tc filter add dev {interface} protocol ip parent 1: prio {priority} u32 match ip src {conn.src}/32 match ip dst {endpoint[0]}/32 flowid {limited[endpoint[0]]['classid']}",
+                        f"tc filter change dev {interface} protocol ip parent 1: handle 800::{filters[endpoint[0]]['filter_handle']} prio {filters[endpoint[0]]['priority']} u32 match ip src {endpoint[0]} match ip dst {conn.src} flowid {limited[endpoint[0]]['classid']}",
                         id,
                     )
+                else:
+                    max_speed -= bytes
 
     result = []
     # Save the limits in redis
     redis_client.set("limits", json.dumps(limited))
+    redis_client.set("filters", json.dumps(filters))
     result.append(run_command(f"tc -s -d -p qdisc show dev {interface}", id))
     result.append(run_command(f"tc -s -d -p -g class show dev {interface}", id))
     result.append(run_command(f"tc -s -d -p filter show dev {interface}", id))
