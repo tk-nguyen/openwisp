@@ -189,7 +189,7 @@ def traffic_control(id):
     data = track_connections()
     interface = "br-lan"
     # max_speed = int(run_command("cat /sys/class/net/eth0/speed", id)) * 1000  # Kbps
-    max_speed = 10000
+    max_speed = 1000
     # limit = max_speed/20
     bandwidth_limit = 100
 
@@ -233,7 +233,7 @@ def traffic_control(id):
                 if bytes > bandwidth_limit:
                     max_bandwidth = max_speed / num_clients
                     run_command(
-                        f"tc class add dev {interface} parent 1:1 classid 1:{counter} htb rate {max_bandwidth}kbit ceil {bandwidth_limit}kbit",
+                        f"tc class add dev {interface} parent 1:1 classid 1:{counter} htb rate {max_bandwidth}kbit ceil {max_speed}kbit",
                         id,
                     )
 
@@ -256,21 +256,23 @@ def traffic_control(id):
                     else:
                         break
                 else:
-                    max_speed -= bytes
+                    if (max_speed - bytes > 0):
+                        max_speed -= bytes
             else:
                 if bytes > bandwidth_limit:
                     max_bandwidth = max_speed / num_clients
                     run_command(
-                        f"tc class change dev {interface} parent 1:1 classid {limited[endpoint[0]]['classid']} htb rate {max_bandwidth}kbit ceil {bandwidth_limit}kbit",
+                        f"tc class change dev {interface} parent 1:1 classid {limited[endpoint[0]]['classid']} htb rate {max_bandwidth}kbit ceil {max_speed}kbit",
                         id,
                     )
-                    # run_command(f"tc filter del dev {interface} handle 800::{filters[endpoint[0]]['filter_handle']} prio {filters[endpoint[0]]['priority']} u32", id)
+                    run_command(f"tc filter del dev {interface} handle 800::{filters[endpoint[0]]['filter_handle']} prio {filters[endpoint[0]]['priority']} u32", id)
                     run_command(
-                        f"tc filter change dev {interface} protocol ip parent 1: handle 800::{filters[endpoint[0]]['filter_handle']} prio {filters[endpoint[0]]['priority']} u32 match ip src {endpoint[0]} match ip dst {conn.src} flowid {limited[endpoint[0]]['classid']}",
+                        f"tc filter add dev {interface} protocol ip parent 1: handle 800::{filters[endpoint[0]]['filter_handle']} prio {filters[endpoint[0]]['priority']} u32 match ip src {endpoint[0]} match ip dst {conn.src} flowid {limited[endpoint[0]]['classid']}",
                         id,
                     )
                 else:
-                    max_speed -= bytes
+                    if (max_speed - bytes > 0):
+                        max_speed -= bytes
 
     result = []
     # Save the limits in redis
