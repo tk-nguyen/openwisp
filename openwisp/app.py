@@ -29,7 +29,7 @@ celery = make_celery(app)
 celery.conf.beat_schedule = {
     "traffic_control": {
         "task": "openwisp.utils.run_traffic_control",
-        "schedule": crontab(minute="*/5"),
+        "schedule": crontab(minute="*/15"),
         "args": (
             list(
                 range(
