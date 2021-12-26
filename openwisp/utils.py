@@ -275,7 +275,6 @@ def traffic_control(id):
     # Save the limits in redis
     redis_client.set("limits", json.dumps(limited))
     redis_client.set("filters", json.dumps(filters))
-    return result
 
 def get_stats(id):
     try:
