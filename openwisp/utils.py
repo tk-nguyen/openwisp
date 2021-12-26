@@ -161,8 +161,6 @@ def run_command(command, id):
             if status == "success":
                 success = True
                 return output.json()["output"]
-            elif status == "in-progress":
-                time.sleep(5)
             elif status == "failed":
                 return output.json()["output"]
     except Exception as e:
@@ -274,14 +272,21 @@ def traffic_control(id):
                     if (max_speed - bytes > 0):
                         max_speed -= bytes
 
-    result = []
     # Save the limits in redis
     redis_client.set("limits", json.dumps(limited))
     redis_client.set("filters", json.dumps(filters))
-    result.append(run_command(f"tc -s -d -p qdisc show dev {interface}", id))
-    result.append(run_command(f"tc -s -d -p -g class show dev {interface}", id))
-    result.append(run_command(f"tc -s -d -p filter show dev {interface}", id))
     return result
+
+def get_stats(id):
+    try:
+        result = []
+        interface = "br-lan"
+        result.append(run_command(f"tc -s -d -p qdisc show dev {interface}", id))
+        result.append(run_command(f"tc -s -d -p -g class show dev {interface}", id))
+        result.append(run_command(f"tc -s -d -p filter show dev {interface}", id))
+        return result
+    except Exception as e:
+        logger.error(f"There seems to be an error: {e}")
 
 
 def get_clients(id):

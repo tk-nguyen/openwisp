@@ -7,11 +7,11 @@ from openwisp.utils import (
     get_device,
     get_device_group,
     get_metrics,
+    get_stats,
     get_template,
     create_device,
     reset_traffic_control,
     run_command,
-    traffic_control,
 )
 from openwisp.forms import CreateDeviceForm, RunCommandForm
 from openwisp.tasks import make_celery
@@ -81,7 +81,7 @@ def create_new_device():
 @app.route("/devices/<int:id>")
 def metrics(id):
     metrics = get_metrics(id - 1)
-    commands = traffic_control(id - 1)
+    commands = get_stats(id - 1)
     return render_template("metrics.html", metrics=metrics, stdout=commands, id=id)
 
 
