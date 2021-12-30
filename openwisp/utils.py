@@ -168,18 +168,18 @@ def run_command(command, id):
 
 
 # Parse the /etc/services file for service port and protocol
-def map_services(id):
-    # The output is "<app>\t\t<port>/<proto>\n", so we split twice
-    output = str(run_command("cat /etc/services", id)).strip().split("\n")
-    svcs = {}
-    for sv in output:
-        tmp = sv.split()
-        app = tmp[0]
-        # We only care about the port,
-        port = tmp[1].split("/")[0]
-        if app not in svcs:
-            svcs[app] = port
-    return svcs
+# def map_services(id):
+#     # The output is "<app>\t\t<port>/<proto>\n", so we split twice
+#     output = str(run_command("cat /etc/services", id)).strip().split("\n")
+#     svcs = {}
+#     for sv in output:
+#         tmp = sv.split()
+#         app = tmp[0]
+#         # We only care about the port,
+#         port = tmp[1].split("/")[0]
+#         if app not in svcs:
+#             svcs[app] = port
+#     return svcs
 
 
 # Limit the traffic
@@ -194,7 +194,7 @@ def traffic_control(id):
     # First we setup basic stuff:
     if data is None:
         return "Error"
-    services = map_services(id)
+    # services = map_services(id)
     num_clients = get_clients(id)
     # Delete the root qdisc
     output = str(run_command(f"tc qdisc show dev {interface} root", id))
@@ -215,11 +215,11 @@ def traffic_control(id):
     filter_counter = 100
     for conn in data:
         for endpoint, bytes in conn.conns.items():
-            if int(endpoint[1]) == services["ssh"]:
+            if int(endpoint[1]) == 22:
                 priority = 1
             elif (
-                int(endpoint[1]) == services["www"]
-                or int(endpoint[1]) == services["https"]
+                int(endpoint[1]) == 80
+                or int(endpoint[1]) == 443
             ):
                 priority = 2
             else:
