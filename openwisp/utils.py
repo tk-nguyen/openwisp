@@ -188,6 +188,7 @@ def traffic_control(id):
     interface = "br-lan"
     # max_speed = int(run_command("cat /sys/class/net/eth0/speed", id)) * 1000  # Kbps
     max_speed = 1000
+    max_link_speed = max_speed
     # limit = max_speed/20
     bandwidth_limit = 100
 
@@ -201,7 +202,7 @@ def traffic_control(id):
     if "htb" not in output:
         run_command(f"tc qdisc add dev {interface} root handle 1: htb default 1", id)
         run_command(
-            f"tc class add dev {interface} parent 1: classid 1:1 htb rate {max_speed}kbit ceil {max_speed}kbit ",
+            f"tc class add dev {interface} parent 1: classid 1:1 htb rate {max_speed}kbit ceil {max_link_speed}kbit ",
             id,
         )
         limited = {}
@@ -231,7 +232,7 @@ def traffic_control(id):
                 if bytes > bandwidth_limit:
                     max_bandwidth = max_speed / num_clients
                     run_command(
-                        f"tc class add dev {interface} parent 1:1 classid 1:{counter} htb rate {max_bandwidth}kbit ceil {max_speed}kbit",
+                        f"tc class add dev {interface} parent 1:1 classid 1:{counter} htb rate {max_bandwidth}kbit ceil {max_link_speed}kbit",
                         id,
                     )
 
@@ -260,7 +261,7 @@ def traffic_control(id):
                 if bytes > bandwidth_limit:
                     max_bandwidth = max_speed / num_clients
                     run_command(
-                        f"tc class change dev {interface} parent 1:1 classid {limited[endpoint[0]]['classid']} htb rate {max_bandwidth}kbit ceil {max_speed}kbit",
+                        f"tc class change dev {interface} parent 1:1 classid {limited[endpoint[0]]['classid']} htb rate {max_bandwidth}kbit ceil {max_link_speed}kbit",
                         id,
                     )
                     run_command(f"tc filter del dev {interface} handle 800::{filters[endpoint[0]]['filter_handle']} prio {filters[endpoint[0]]['priority']} u32", id)
